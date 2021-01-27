@@ -1,0 +1,25 @@
+Routes
+
+Post routes
+- create a new user
+	a user instance has
+		_id
+		username
+		an array containing each exercise log
+			each exercise log contains
+				description
+				duration
+				date
+
+- add an exercise to an existing user with a given id
+	get a user with a specified id, add to the exercises of the user
+	show the newly added exercise
+
+Get routes
+- all the users
+	get all the users of the database but limit the query to only the username and the id of the users
+	
+- (with param) retrieve log of a user
+	get a user with the id specified in parameters
+	additional params - from, to and limit
+		if additional params are indicated, limit the queries accordingingly
