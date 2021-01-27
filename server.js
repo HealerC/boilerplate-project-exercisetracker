@@ -35,7 +35,7 @@ db.once('open', function() {
   app.post('/api/exercise/new-user', (req, res) => {
   	ExerciseTracker.findOne({username: req.body.username}, (err, user) => {
   		if (err) {
-  			console.error(err)
+  			console.error(err);
   			res.send(err);
   		}
   		else if (!user) {
@@ -63,6 +63,40 @@ db.once('open', function() {
   		}
   	});
   });
+
+  app.post('/api/exercise/add', (req, res) => {
+  	ExerciseTracker.findById(req.body.userId, (err, user) => {
+  	  if (err) {
+  		console.error(err);
+  		res.send(err);
+  	  } else if (!user) {
+  		  res.send("No such user with the specified id found:", req.body.userId);
+  		} else {
+  		    let newExercise = {
+  			  description: req.body.description || "No description specified",
+  			  duration: req.body.duration || "No duration specified",
+  			  date: new Date(req.body.date) || new Date()
+  			}
+  			user.exerciseList.push(newExercise);
+  			user.save((err, doc) => {
+  			  if (err) {
+  			 	console.error(err);
+  				res.send(err);
+  			  } else {
+  				  res.json({
+  					username: doc.username,
+  					id: doc._id,
+  					date: newExercise.date.toDateString(),
+  					duration: newExercise.duration,
+  					description: newExercise.description
+  				});
+  			  }
+  		  })
+  		}
+  	})
+  });
+
+  
 });
 
 
