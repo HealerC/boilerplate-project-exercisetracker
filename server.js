@@ -22,6 +22,7 @@ db.once('open', function() {
 
   const userExSchema = new mongoose.Schema({
   	username: String,
+  	count: Number,
   	exerciseList: [{
   		description: String,
   		duration: Number,
@@ -41,6 +42,7 @@ db.once('open', function() {
   		else if (!user) {
   			const newUser = new ExerciseTracker({
   				username: req.body.username,
+  				count: 0,
   				exerciseList: []
   			});
 
@@ -67,28 +69,31 @@ db.once('open', function() {
   app.post('/api/exercise/add', (req, res) => {
   	ExerciseTracker.findById(req.body.userId, (err, user) => {
   	  if (err) {
-  		console.error(err);
-  		res.send(err);
+  	  	err.name === "CastError" ? res.send("The ID supplied is incorrect") :
+  	  							   res.send("An error occured " + err.name);
+  		console.error(err.name);
   	  } else if (!user) {
-  		  res.send("No such user with the specified id found:", req.body.userId);
+  		  res.send("No such user with the specified id found: " + req.body.userId);
   		} else {
   		    let newExercise = {
   			  description: req.body.description || "No description specified",
   			  duration: req.body.duration || "No duration specified",
-  			  date: new Date(req.body.date) || new Date()
+  			  date: new Date(req.body.date).toDateString() || new Date().toDateString()
   			}
   			user.exerciseList.push(newExercise);
+  			user.count++;
   			user.save((err, doc) => {
   			  if (err) {
   			 	console.error(err);
   				res.send(err);
   			  } else {
+  			  	  const justSaved = doc.exerciseList[doc.exerciseList.length-1];
   				  res.json({
   					username: doc.username,
   					id: doc._id,
-  					date: newExercise.date.toDateString(),
-  					duration: newExercise.duration,
-  					description: newExercise.description
+  					date: justSaved.date.toDateString(),
+  					duration: justSaved.duration,
+  					description: justSaved.description
   				});
   			  }
   		  })
@@ -96,7 +101,7 @@ db.once('open', function() {
   	})
   });
 
-  
+  app.get('')
 });
 
 
