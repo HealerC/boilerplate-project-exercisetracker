@@ -23,13 +23,15 @@ db.once('open', function() {
   const userExSchema = new mongoose.Schema({
   	username: String,
   	count: Number,
-  	exerciseList: [{
+  	log: [{
   		description: String,
   		duration: Number,
-  		date: { type: Date, default: Date.now } 
+  		date: { type: Date, default: Date.now },
+  		_id: false
   	}]
   });
 
+  //userExSchema.methods.render = function() {}
   const ExerciseTracker = mongoose.model('ExerciseTracker', userExSchema);
 
 
@@ -43,7 +45,7 @@ db.once('open', function() {
   			const newUser = new ExerciseTracker({
   				username: req.body.username,
   				count: 0,
-  				exerciseList: []
+  				log: []
   			});
 
   			newUser.save((err, doc) => {
@@ -53,14 +55,14 @@ db.once('open', function() {
   				} else {
   					res.json({
   						username: doc.username,
-  						id: doc._id
+  						_id: doc._id
   					});
   				}
   			});
   		} else {
   			res.json({
   				username: user.username,
-  				id: user._id
+  				_id: user._id
   			});
   		}
   	});
@@ -78,19 +80,19 @@ db.once('open', function() {
   		    let newExercise = {
   			  description: req.body.description || "No description specified",
   			  duration: req.body.duration || "No duration specified",
-  			  date: new Date(req.body.date).toDateString() || new Date().toDateString()
+  			  date: new Date(req.body.date) || new Date()
   			}
-  			user.exerciseList.push(newExercise);
+  			user.log.push(newExercise);
   			user.count++;
   			user.save((err, doc) => {
   			  if (err) {
   			 	console.error(err);
   				res.send(err);
   			  } else {
-  			  	  const justSaved = doc.exerciseList[doc.exerciseList.length-1];
+  			  	  const justSaved = doc.log[doc.log.length-1];
   				  res.json({
   					username: doc.username,
-  					id: doc._id,
+  					_id: doc._id,
   					date: justSaved.date.toDateString(),
   					duration: justSaved.duration,
   					description: justSaved.description
@@ -102,7 +104,6 @@ db.once('open', function() {
   });
 
   app.get('/api/exercise/users', (req, res) => {
-  	console.log(req.method);
   	ExerciseTracker.find({}).select({username: 1, _id: 1})
   				   .exec((err, docs) => {
   				     if (err) {
@@ -114,7 +115,20 @@ db.once('open', function() {
   				   });
   });
 
-  
+  app.get('/api/exercise/log', (req, res) => {
+  	const id = req.query.userId;
+  	ExerciseTracker.findById(id, (err, user) => {
+  	  if (err) {
+  	  	err.name === "CastError" ? res.send("The ID supplied is incorrect") :
+  	  							   res.send("An error occured " + err.name);
+  		console.error(err.name);
+  	  } else if (!user) {
+  	  	res.send("No such user with the specified id found: " + id);
+  	  } else {
+  	  	res.json(user);
+  	  }
+  	})
+  });
 });
 
 
