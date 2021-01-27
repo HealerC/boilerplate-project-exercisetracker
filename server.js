@@ -101,7 +101,20 @@ db.once('open', function() {
   	})
   });
 
-  app.get('')
+  app.get('/api/exercise/users', (req, res) => {
+  	console.log(req.method);
+  	ExerciseTracker.find({}).select({username: 1, _id: 1})
+  				   .exec((err, docs) => {
+  				     if (err) {
+  				       console.error(err.name);
+  				       res.send("An error occured: " + err.name);
+  				     } else {
+  				       res.json(docs);
+  				     }
+  				   });
+  });
+
+  
 });
 
 
