@@ -125,7 +125,19 @@ db.once('open', function() {
   	  } else if (!user) {
   	  	res.send("No such user with the specified id found: " + id);
   	  } else {
-  	  	res.json(user);
+  	  	const copy = user.toObject();
+
+  	  	copy.log = copy.log.map(data => {
+  	  	  return {
+  	  	  	description: data.description,
+  	  	  	duration: data.duration,
+  	  	  	date: data.date.toDateString()
+  	  	  };
+  	  	});
+  	  	
+  	  	delete copy.__v;
+  	  	
+  	  	res.json(copy);
   	  }
   	})
   });
