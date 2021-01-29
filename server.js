@@ -117,29 +117,40 @@ db.once('open', function() {
 
   app.get('/api/exercise/log', (req, res) => {
   	const id = req.query.userId;
-  	ExerciseTracker.findById(id, (err, user) => {
-  	  if (err) {
-  	  	err.name === "CastError" ? res.send("The ID supplied is incorrect") :
-  	  							   res.send("An error occured " + err.name);
-  		console.error(err.name);
-  	  } else if (!user) {
-  	  	res.send("No such user with the specified id found: " + id);
-  	  } else {
-  	  	const copy = user.toObject();
+  	let gte = {};
+  	let lte = {};
+  	let limit = 0;
 
-  	  	copy.log = copy.log.map(data => {
-  	  	  return {
-  	  	  	description: data.description,
-  	  	  	duration: data.duration,
-  	  	  	date: data.date.toDateString()
-  	  	  };
-  	  	});
-  	  	
-  	  	delete copy.__v;
-  	  	
-  	  	res.json(copy);
-  	  }
-  	})
+  	if (new Date(req.query.from) !== "Invalid Date") {
+  	  gte = new Date(req.query.from);
+  	}
+  	if (new Date(req.query.to) !== "Invalid Date") {
+  	  lte = new Date(req.query.to);
+  	}
+  	if (!isNaN(req.query.limit)) {
+  	  limit = req.query.limit;
+  	}
+
+  	console.log("From", gte);
+  	console.log("To", lte);
+  	console.log("Limit", limit);
+  	const result = ExerciseTracker.aggregate([
+      { $match: { _id: id }},
+      { $project: { username: 1, count: 1, 
+                  log: { $filter: { input: '$log', as: 'item', 
+                            cond: { $and: [{$gte: ['$$item.date', gte]}, 
+                            			   {$lte: ['$$item.date', lte]}]
+                            	  }} 
+                       }
+                  }
+      }
+    ]).exec((err, data) => {
+      if (err) {
+        console.error(err);
+      }
+      console.log(data);
+      res.json(data);
+    });;
   });
 });
 
