@@ -7,6 +7,10 @@ const bodyParser = require('body-parser');
 
 app.use(cors());
 app.use(express.static('public'));
+app.use((req, res, next) => {
+  console.log(req.method, req.ip, req.path);
+  next();
+})
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/views/index.html');
 });
@@ -77,10 +81,12 @@ db.once('open', function() {
   	  } else if (!user) {
   		  res.send("No such user with the specified id found: " + req.body.userId);
   		} else {
+  			const date = new Date(req.body.date) == "Invalid Date" ? new Date :
+  																	 new Date(req.body.date);
   		    let newExercise = {
   			  description: req.body.description || "No description specified",
   			  duration: req.body.duration || "No duration specified",
-  			  date: new Date(req.body.date) || new Date()
+  			  date: date
   			}
   			user.log.push(newExercise);
   			user.count++;
@@ -117,38 +123,50 @@ db.once('open', function() {
 
   app.get('/api/exercise/log', (req, res) => {
   	const id = req.query.userId;
-  	let gte = {};
-  	let lte = {};
-  	let limit = 0;
-
-  	if (new Date(req.query.from) !== "Invalid Date") {
-  	  gte = new Date(req.query.from);
-  	}
-  	if (new Date(req.query.to) !== "Invalid Date") {
-  	  lte = new Date(req.query.to);
-  	}
-  	if (!isNaN(req.query.limit)) {
-  	  limit = req.query.limit;
-  	}
+  	
+    const Default = {
+      gte: new Date(-8640000000000000),
+      lte: new Date(8640000000000000),
+      limit: 1000
+    }
+  	let gte = new Date(req.query.from) == "Invalid Date" ? Default.gte :
+  															                           new Date(req.query.from);
+  	let lte = new Date(req.query.to) == "Invalid Date" ? Default.lte :
+  															                         new Date(req.query.to);
+  	let limit = isNaN(req.query.limit) ? Default.limit : +req.query.limit;
 
   	console.log("From", gte);
   	console.log("To", lte);
   	console.log("Limit", limit);
   	const result = ExerciseTracker.aggregate([
-      { $match: { _id: id }},
+      { $match: { _id: mongoose.Types.ObjectId(id) }},
       { $project: { username: 1, count: 1, 
-                  log: { $filter: { input: '$log', as: 'item', 
+                  log: { $slice: [{ $filter: { input: '$log', as: 'item', 
                             cond: { $and: [{$gte: ['$$item.date', gte]}, 
                             			   {$lte: ['$$item.date', lte]}]
                             	  }} 
-                       }
+                       }, limit]}
                   }
       }
     ]).exec((err, data) => {
       if (err) {
         console.error(err);
       }
-      console.log(data);
+      data = data[0];
+      data.count = data.log.length;
+      data.query = {};
+      if (gte !== Default.gte) {
+        data.query.from = gte.toDateString(); 
+      }
+      if (lte !== Default.lte) {
+        data.query.to = lte.toDateString();
+      }
+      if (limit !== Default.limit) {
+        data.query.limit = limit;
+      }
+      for (let elem in data.log) {
+      	data.log[elem].date = data.log[elem].date.toDateString();
+      }
       res.json(data);
     });;
   });
